@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "workspace": {
+    "name": "omnirush.ai",
+    "createdAt": 1790698314278,
+    "preset": "starter"
+  },
+  "authorizedRoots": [
+    "/Users/sleepy_syntax/omnirush.ai"
+  ],
+  "reload": null
+}

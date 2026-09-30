@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#071016" />
+    <title>EmberWatch — Thermal Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-lockup">
+          <div class="brand-mark"><span></span><span></span><span></span></div>
+          <div><div class="brand-name">EMBERWATCH</div><div class="brand-caption">THERMAL INTELLIGENCE</div></div>
+        </div>
+        <div class="rail-label">COMMAND CENTRE</div>
+        <nav class="nav-list">
+          <button class="nav-item active"><span class="nav-icon">⌁</span>Live intelligence</button>
+          <button class="nav-item" id="navAlerts"><span class="nav-icon">◉</span>Alert queue <b id="navAlertCount">—</b></button>
+          <button class="nav-item" id="navAtlas"><span class="nav-icon">◫</span>Industrial atlas</button>
+          <button class="nav-item" id="navReports"><span class="nav-icon">↗</span>Evidence reports</button>
+        </nav>
+        <div class="rail-divider"></div>
+        <div class="rail-label">DATA FABRIC</div>
+        <div class="source-list">
+          <div class="source-row"><span class="source-dot live"></span><span>NASA FIRMS</span><small id="firmsSource">demo</small></div>
+          <div class="source-row"><span class="source-dot live"></span><span>OpenStreetMap</span><small id="osmSource">catalogue</small></div>
+          <div class="source-row"><span class="source-dot satellite"></span><span>Satellite basemap</span><small>online</small></div>
+        </div>
+        <div class="sidebar-spacer"></div>
+        <div class="pilot-card">
+          <div class="pilot-top"><span class="pulse-ring"></span><span>EARLY WARNING PILOT</span></div>
+          <p>One pane of glass for thermal anomalies near India's industrial corridors.</p>
+          <div class="pilot-meta"><span>MODEL v1.0</span><span>NDVI + FIRMS</span></div>
+        </div>
+        <div class="user-chip"><div class="avatar">OC</div><div><strong>Ops Console</strong><small>Read-only analyst</small></div><span class="chevron">⌄</span></div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div><div class="eyebrow">NATIONAL THERMAL EVENT MONITOR</div><h1>Live intelligence <span class="slash">/</span> India</h1></div>
+          <div class="top-actions">
+            <div class="mode-pill" id="modePill"><span class="status-dot"></span><span id="modeText">DEMO MODE</span></div>
+            <div class="updated" id="lastUpdated">Syncing…</div>
+            <button class="icon-button" id="themeToggle" title="Toggle light/dark theme">◐</button>
+            <button class="showcase-button" id="showcaseBtn"><span>✦</span> Judge demo</button><button class="refresh-button" id="refreshBtn"><span class="refresh-icon">↻</span> Refresh intelligence</button>
+          </div>
+        </header>
+
+        <section class="metric-grid" aria-label="Overview metrics">
+          <article class="metric-card accent-red"><div class="metric-head"><span>ACTIVE ALERTS</span><span class="metric-symbol">◉</span></div><div class="metric-value" id="metricAlerts">—</div><div class="metric-foot"><span class="trend down">↑</span><span>requires triage</span></div></article>
+          <article class="metric-card accent-amber"><div class="metric-head"><span>CRITICAL ZONES</span><span class="metric-symbol">✦</span></div><div class="metric-value" id="metricCritical">—</div><div class="metric-foot"><span class="trend flat">•</span><span>industrial proximity</span></div></article>
+          <article class="metric-card accent-orange"><div class="metric-head"><span>HOTSPOTS / 24H</span><span class="metric-symbol">⌁</span></div><div class="metric-value" id="metricHotspots">—</div><div class="metric-foot"><span class="trend up">↗</span><span id="metricFireText">thermal observations</span></div></article>
+          <article class="metric-card accent-teal"><div class="metric-head"><span>MEAN CONFIDENCE</span><span class="metric-symbol">✓</span></div><div class="metric-value"><span id="metricConfidence">—</span><small>%</small></div><div class="metric-foot"><span class="trend good">●</span><span>VIIRS signal quality</span></div></article>
+        </section>
+
+        <section class="workspace-grid">
+          <div class="map-card panel">
+            <div class="panel-toolbar">
+              <div><div class="panel-kicker">SPATIAL OVERVIEW</div><h2>Thermal event map</h2></div>
+              <div class="toolbar-controls"><button class="layer-button active" data-layer="hotspots"><span class="legend-dot red"></span>Hotspots</button><button class="layer-button" data-layer="sites"><span class="legend-dot blue"></span>Industrial assets</button><button class="layer-button" data-layer="satellite"><span class="legend-dot grey"></span>Satellite</button><button class="map-expand" title="Fit all events">⤢</button></div>
+            </div>
+            <div id="map"></div>
+            <div class="map-overlay"><div class="map-status"><span class="status-dot"></span><span id="mapStatus">LIVE SENSOR WINDOW · LAST 24 HOURS</span></div><div class="scale-note">1 px ≈ 1.3 km</div></div>
+            <div class="map-legend"><span><i class="legend-dot critical"></i>Critical</span><span><i class="legend-dot high"></i>High</span><span><i class="legend-dot medium"></i>Monitor</span><span><i class="legend-dot asset"></i>Asset</span></div>
+          </div>
+
+          <aside class="alerts-panel panel">
+            <div class="panel-toolbar compact"><div><div class="panel-kicker">DECISION QUEUE</div><h2>Priority alerts <span class="count-badge" id="alertBadge">—</span></h2></div><button class="more-button">•••</button></div>
+            <div class="alert-filters"><button class="filter-chip active" data-filter="all">All</button><button class="filter-chip" data-filter="CRITICAL">Critical</button><button class="filter-chip" data-filter="HIGH">High</button></div>
+            <div class="alert-list" id="alertList"><div class="loading-state"><span class="loader"></span>Loading sensor queue…</div></div>
+            <button class="queue-button" id="showAllBtn">Open full queue <span>→</span></button>
+          </aside>
+        </section>
+
+        <section class="bottom-grid">
+          <article class="timeline-card panel"><div class="panel-toolbar compact"><div><div class="panel-kicker">TEMPORAL PULSE</div><h2>Detection activity</h2></div><div class="range-pill">LAST 24 HOURS <span>⌄</span></div></div><div class="timeline" id="timeline"><div class="loading-state"><span class="loader"></span>Building activity curve…</div></div><div class="timeline-axis"><span>24h ago</span><span>18h</span><span>12h</span><span>6h</span><span>Now</span></div></article>
+          <article class="insight-card panel"><div class="panel-kicker">MODEL INSIGHT</div><h2>What changed?</h2><div class="insight-main"><div class="insight-number" id="insightNumber">—</div><div><strong>high-risk events clustered</strong><span>around mapped industrial corridors</span></div></div><div class="insight-bar"><span id="insightBar"></span></div><div class="insight-footer"><span><i class="tiny-dot red"></i>industrial probability</span><span id="insightValue">—</span></div></article>
+          <article class="sources-card panel"><div class="panel-kicker">PROVENANCE</div><h2>Evidence chain</h2><div class="provenance-row"><div class="prov-icon nasa">N</div><div><strong>NASA FIRMS / VIIRS</strong><span>Fire radiative power + confidence</span></div><span class="prov-check">✓</span></div><div class="provenance-row"><div class="prov-icon osm">⌘</div><div><strong>OpenStreetMap</strong><span>Industrial assets + context</span></div><span class="prov-check">✓</span></div><div class="provenance-row"><div class="prov-icon sat">✦</div><div><strong>Satellite context</strong><span>Visual verification layer</span></div><span class="prov-check">✓</span></div></article>
+        </section>
+        <footer class="footer-note"><span>EMBERWATCH / SIH26162 PROTOTYPE</span><span>Explainable intelligence · Human-in-the-loop verification · Source links preserved</span></footer>
+      </main>
+    </div>
+
+    <div class="detail-drawer" id="detailDrawer" aria-hidden="true"><div class="drawer-backdrop" id="drawerBackdrop"></div><div class="drawer-content"><div class="drawer-header"><div><div class="panel-kicker">EVENT DOSSIER</div><h2 id="drawerTitle">Alert details</h2></div><button class="drawer-close" id="drawerClose">×</button></div><div id="drawerBody"></div></div></div>
+    <div class="toast" id="toast"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

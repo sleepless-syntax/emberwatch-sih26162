@@ -1,0 +1,14 @@
+services:
+  emberwatch:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      NASA_FIRMS_MAP_KEY: ${NASA_FIRMS_MAP_KEY:-}
+      ENABLE_LIVE_OSM: ${ENABLE_LIVE_OSM:-false}
+    volumes:
+      - emberwatch_state:/app/data
+
+volumes:
+  emberwatch_state:
