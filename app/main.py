@@ -98,6 +98,9 @@ def parse_confidence(raw: Any) -> float:
     if isinstance(raw, (int, float)):
         return float(raw)
     text = str(raw or "0").strip().replace("%", "")
+    named = {"h": 90.0, "high": 90.0, "n": 70.0, "nominal": 70.0, "l": 40.0, "low": 40.0}
+    if text.lower() in named:
+        return named[text.lower()]
     try:
         return float(text)
     except ValueError:
