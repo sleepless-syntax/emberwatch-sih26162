@@ -5,7 +5,6 @@ import io
 import json
 import math
 import os
-import random
 import subprocess
 import urllib.parse
 import urllib.request
@@ -16,9 +15,10 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
+from .demo_data import DEMO_OBSERVATIONS, DEMO_SITES
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -41,18 +41,6 @@ app.add_middleware(
 )
 
 
-DEMO_SITES: list[dict[str, Any]] = [
-    {"id": "site-jamnagar", "name": "Jamnagar Refining Complex", "operator": "Reliance Industries", "type": "Refinery", "lat": 22.337, "lon": 69.845, "risk_zone": "CRITICAL", "assets": 18},
-    {"id": "site-mumbai", "name": "Mumbai Petrochemical Belt", "operator": "MRPL / HPCL corridor", "type": "Petrochemical", "lat": 19.000, "lon": 73.022, "risk_zone": "HIGH", "assets": 26},
-    {"id": "site-vizag", "name": "Visakhapatnam Industrial Port", "operator": "HPCL / VPA corridor", "type": "Port & Refinery", "lat": 17.686, "lon": 83.218, "risk_zone": "HIGH", "assets": 14},
-    {"id": "site-paradip", "name": "Paradip Industrial Cluster", "operator": "IOCL / PPL corridor", "type": "Refinery & Fertilizer", "lat": 20.316, "lon": 86.611, "risk_zone": "HIGH", "assets": 11},
-    {"id": "site-panipat", "name": "Panipat Refinery Zone", "operator": "Indian Oil Corporation", "type": "Refinery", "lat": 29.389, "lon": 76.969, "risk_zone": "HIGH", "assets": 12},
-    {"id": "site-bokaro", "name": "Bokaro Steel Works", "operator": "SAIL", "type": "Steel Plant", "lat": 23.669, "lon": 86.151, "risk_zone": "MEDIUM", "assets": 9},
-    {"id": "site-kakinada", "name": "Kakinada Energy Hub", "operator": "ONGC / port corridor", "type": "Energy", "lat": 16.989, "lon": 82.247, "risk_zone": "MEDIUM", "assets": 8},
-    {"id": "site-chennai", "name": "Manali Industrial Estate", "operator": "CPCL corridor", "type": "Petrochemical", "lat": 13.164, "lon": 80.265, "risk_zone": "HIGH", "assets": 17},
-]
-
-
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -73,24 +61,9 @@ def distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 def demo_raw_hotspots() -> list[dict[str, Any]]:
     """Deterministic fixtures make the demo reliable without an API key or network."""
     now = utc_now()
-    rows = [
-        ("jam-01", 22.342, 69.858, 371.2, 42.8, "88", 0.6, 1),
-        ("jam-02", 22.329, 69.836, 358.9, 31.6, "82", 2.2, 2),
-        ("jam-03", 22.350, 69.872, 346.7, 16.7, "76", 7.5, 3),
-        ("mum-01", 18.986, 73.036, 364.3, 55.1, "92", 1.4, 4),
-        ("mum-02", 19.012, 73.008, 340.5, 12.3, "71", 8.2, 5),
-        ("viz-01", 17.677, 83.232, 353.8, 28.4, "86", 3.1, 6),
-        ("viz-02", 17.699, 83.204, 327.4, 7.8, "63", 15.0, 7),
-        ("par-01", 20.303, 86.624, 366.5, 33.7, "89", 2.6, 8),
-        ("pan-01", 29.402, 76.953, 351.9, 24.2, "81", 5.7, 9),
-        ("bok-01", 23.684, 86.136, 337.0, 18.0, "74", 10.3, 10),
-        ("kak-01", 16.976, 82.264, 318.4, 4.7, "54", 18.8, 11),
-        ("forest-01", 22.572, 78.944, 309.8, 3.4, "48", 12.1, 12),
-        ("forest-02", 21.924, 84.503, 312.1, 5.1, "52", 20.4, 13),
-        ("chen-01", 13.177, 80.278, 360.1, 21.9, "84", 4.8, 14),
-    ]
+    rows = DEMO_OBSERVATIONS
     result = []
-    for key, lat, lon, brightness, frp, confidence, hours_ago, seed in rows:
+    for key, lat, lon, brightness, frp, confidence, hours_ago, seed, classification in rows:
         result.append({
             "id": f"FIRMS-DEMO-{key.upper()}",
             "latitude": lat,
@@ -109,6 +82,8 @@ def demo_raw_hotspots() -> list[dict[str, Any]]:
             "daynight": "D" if seed % 3 else "N",
             "source": "NASA FIRMS (demo fixture)",
             "source_type": "FIRMS",
+            "demo_classification": classification,
+            "demo_data": True,
         })
     return result
 
@@ -168,27 +143,38 @@ def enrich_hotspot(row: dict[str, Any], all_rows: list[dict[str, Any]], sites: l
         + 0.04 * recency_score
     ))
 
-    if industrial_proximity > 0.52 and item["frp"] >= 25 and item["confidence_value"] >= 75:
-        label = "INDUSTRIAL FIRE"
-        category = "industrial_fire"
+    demo_classification = item.get("demo_classification")
+    if demo_classification:
+        category = demo_classification
+    elif industrial_proximity > 0.52 and item["frp"] >= 45 and item["confidence_value"] >= 85:
+        category = "suspected_industrial_fire"
     elif industrial_proximity > 0.45 and nearby_count >= 2 and item["frp"] >= 12:
-        label = "PERSISTENT THERMAL"
         category = "persistent_thermal"
     elif item["frp"] >= 28 and item["confidence_value"] >= 80:
-        label = "HIGH-ENERGY SOURCE"
         category = "high_energy"
     else:
-        label = "UNCLASSIFIED HOTSPOT"
         category = "unclassified"
+    labels = {
+        "suspected_industrial_fire": "SUSPECTED INDUSTRIAL FIRE",
+        "persistent_thermal": "PERSISTENT THERMAL SOURCE",
+        "industrial_thermal": "INDUSTRIAL THERMAL SOURCE",
+        "non_industrial_thermal": "NON-INDUSTRIAL THERMAL SOURCE",
+        "high_energy": "HIGH-ENERGY SOURCE",
+        "unclassified": "UNCLASSIFIED HOTSPOT",
+    }
+    label = labels.get(category, "UNCLASSIFIED HOTSPOT")
     severity = "CRITICAL" if risk >= 78 else "HIGH" if risk >= 60 else "MEDIUM" if risk >= 38 else "LOW"
-    if label == "INDUSTRIAL FIRE" and risk < 78:
-        severity = "HIGH"
+    classification_note = (
+        "Demo classification is a scenario label for judging; live observations use the conservative rule set"
+        if item.get("demo_classification")
+        else "Classification is a screening result and requires human verification"
+    )
     item.update({
         "label": label,
         "category": category,
         "severity": severity,
         "risk_score": risk,
-        "confidence": round(min(99.0, max(item["confidence_value"], 52 + risk * 0.42)), 1),
+        "confidence": round(item["confidence_value"], 1),
         "persistence_count": nearby_count,
         "risk_factors": [
             {"name": "Thermal intensity", "value": round(100 * frp_score), "detail": f"{item['frp']:.1f} MW FRP"},
@@ -201,8 +187,10 @@ def enrich_hotspot(row: dict[str, Any], all_rows: list[dict[str, Any]], sites: l
             f"Thermal radiative power is {item['frp']:.1f} MW",
             f"{nearby_count} FIRMS observation(s) within an 8 km spatio-temporal cluster",
             f"VIIRS {item.get('satellite', 'NRT')} confidence is {item['confidence_value']:.0f}%",
+            classification_note,
         ],
         "status": "NEW" if risk >= 60 else "MONITORING",
+        "classification_basis": "curated demo scenario" if item.get("demo_classification") else "screening model",
     })
     return item
 
@@ -212,6 +200,15 @@ def build_alerts(hotspots: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for item in sorted(hotspots, key=lambda x: x["risk_score"], reverse=True):
         if item["risk_score"] < 45:
             continue
+        category = item.get("category", "unclassified")
+        if category == "suspected_industrial_fire":
+            summary = f"{item['frp']:.1f} MW signal {item['distance_to_site_km']:.1f} km from mapped industrial assets; verify before dispatch."
+        elif category == "persistent_thermal":
+            summary = f"{item['frp']:.1f} MW persistent thermal signal near mapped assets; likely sustained heat or flaring."
+        elif category == "non_industrial_thermal":
+            summary = f"{item['frp']:.1f} MW thermal signal outside the mapped industrial network; monitor for recurrence."
+        else:
+            summary = f"{item['frp']:.1f} MW thermal signal requires analyst review."
         alerts.append({
             "id": f"ALERT-{item['id']}",
             "hotspot_id": item["id"],
@@ -221,7 +218,8 @@ def build_alerts(hotspots: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "timestamp": item.get("acquired_at"),
             "risk_score": item["risk_score"],
             "status": item["status"],
-            "summary": f"{item['frp']:.1f} MW thermal anomaly detected {item['distance_to_site_km']:.1f} km from mapped industrial assets.",
+            "summary": summary,
+            "category": category,
         })
     return alerts
 
@@ -230,20 +228,23 @@ def initial_state() -> dict[str, Any]:
     raw = demo_raw_hotspots()
     enriched = [enrich_hotspot(row, raw, DEMO_SITES) for row in raw]
     return {
+        "schema_version": 2,
         "hotspots": enriched,
         "sites": DEMO_SITES,
         "alerts": build_alerts(enriched),
         "mode": "DEMO",
         "last_updated": iso(utc_now()),
         "source_status": {"firms": "demo fixture", "osm": "catalogue seed", "satellite": "Esri World Imagery tiles"},
-        "refresh_message": "Demo intelligence loaded. Add NASA_FIRMS_MAP_KEY to pull fresh FIRMS observations.",
+        "refresh_message": "Curated judge scenario loaded. Demo observations are clearly labelled and require human verification.",
     }
 
 
 def read_state() -> dict[str, Any]:
     if STATE_FILE.exists():
         try:
-            return json.loads(STATE_FILE.read_text())
+            state = json.loads(STATE_FILE.read_text())
+            if state.get("schema_version") == 2:
+                return state
         except (OSError, json.JSONDecodeError):
             pass
     state = initial_state()
@@ -352,6 +353,7 @@ def refresh_state() -> dict[str, Any]:
         state["hotspots"] = [enrich_hotspot(row, demo_rows, selected_sites) for row in demo_rows]
         state["mode"] = "DEMO"
     state["sites"] = selected_sites
+    state["schema_version"] = 2
     state["alerts"] = build_alerts(state["hotspots"])
     state["last_updated"] = iso(utc_now())
     state["source_status"] = {"firms": "live" if firms_rows else "demo fixture", "osm": "live" if osm_sites else "catalogue seed", "satellite": "Esri World Imagery tiles"}
@@ -377,14 +379,21 @@ def overview() -> dict[str, Any]:
     alerts = state["alerts"]
     counts = Counter(item["severity"] for item in hotspots)
     categories = Counter(item["category"] for item in hotspots)
+    critical_site_ids = {item.get("nearest_site_id") for item in hotspots if item["severity"] == "CRITICAL" and item.get("nearest_site_id")}
     return {
         "mode": state["mode"], "last_updated": state["last_updated"], "refresh_message": state["refresh_message"],
         "metrics": {
-            "active_alerts": len(alerts), "critical_zones": counts.get("CRITICAL", 0), "hotspots_24h": len(hotspots),
-            "industrial_fires": categories.get("industrial_fire", 0), "persistent_sources": categories.get("persistent_thermal", 0),
+            "active_alerts": len(alerts), "critical_zones": len(critical_site_ids), "hotspots_24h": len(hotspots),
+            "industrial_fires": categories.get("suspected_industrial_fire", 0), "persistent_sources": categories.get("persistent_thermal", 0),
             "mapped_assets": len(state["sites"]), "mean_confidence": round(sum(x["confidence"] for x in hotspots) / max(1, len(hotspots))),
         },
         "severity_counts": dict(counts), "category_counts": dict(categories), "source_status": state["source_status"],
+        "consistency": {
+            "alerts_match_risk_threshold": len(alerts) == sum(1 for item in hotspots if item["risk_score"] >= 45),
+            "critical_alerts": sum(1 for item in alerts if item["severity"] == "CRITICAL"),
+            "high_alerts": sum(1 for item in alerts if item["severity"] == "HIGH"),
+            "dataset_observations": len(hotspots),
+        },
     }
 
 
@@ -444,7 +453,7 @@ def refresh() -> dict[str, Any]:
 def demo_reset() -> dict[str, Any]:
     state = initial_state()
     write_state(state)
-    return {"ok": True, "mode": state["mode"], "message": state["refresh_message"]}
+    return {"ok": True, "mode": state["mode"], "message": state["refresh_message"], "observations": len(state["hotspots"]), "alerts": len(state["alerts"])}
 
 
 @app.get("/api/report/{hotspot_id}")
@@ -458,6 +467,16 @@ def report(hotspot_id: str) -> dict[str, Any]:
 @app.get("/", include_in_schema=False)
 def root() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/privacy", include_in_schema=False)
+def privacy() -> FileResponse:
+    return FileResponse(STATIC_DIR / "privacy.html")
+
+
+@app.get("/terms", include_in_schema=False)
+def terms() -> FileResponse:
+    return FileResponse(STATIC_DIR / "terms.html")
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

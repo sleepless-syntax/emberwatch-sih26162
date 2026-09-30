@@ -44,3 +44,40 @@ button { color: inherit; font: inherit; border: 0; cursor: pointer; }
 @media (max-width: 1200px) { .sidebar { width: 208px; }.main-content { padding: 26px 22px 18px; }.workspace-grid { grid-template-columns: minmax(0, 1fr) 290px; }.layer-button { padding: 6px; }.bottom-grid { grid-template-columns: 1.35fr 1fr; }.sources-card { grid-column: span 2; } }
 @media (max-width: 900px) { .sidebar { display: none; }.topbar { align-items: start; flex-direction: column; }.top-actions { width: 100%; justify-content: space-between; }.metric-grid { grid-template-columns: repeat(2, 1fr); }.workspace-grid, .bottom-grid { grid-template-columns: 1fr; }.sources-card { grid-column: auto; }.map-card, .alerts-panel { min-height: 460px; } }
 @media (max-width: 560px) { .main-content { padding: 22px 12px; }.top-actions { flex-wrap: wrap; gap: 8px; }.updated { order: 3; width: 100%; }.metric-card { padding: 13px; }.metric-value { font-size: 27px; }.toolbar-controls { flex-wrap: wrap; justify-content: end; max-width: 190px; }.map-card #map { height: 380px; }.footer-note { flex-direction: column; gap: 5px; }.map-legend { gap: 8px; left: 8px; }.map-overlay { left: 8px; }.scale-note { display: none; } }
+
+/* Operational UI refinements: flat surfaces, explicit states, and dense controls. */
+.main-content { background: var(--bg); }
+.sidebar { background: var(--bg); }
+.metric-card::after { display: none; }
+.metric-card, .panel { box-shadow: none; }
+.pilot-card, .dossier-banner, .insight-bar span { background: var(--panel-2); }
+.timeline-bar { background: var(--orange); }
+.insight-bar span { background: var(--orange); }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.showcase-button span { font: 8px 'DM Mono', monospace; letter-spacing: .04em; }
+.queue-summary { color: var(--muted); font: 8px 'DM Mono', monospace; text-transform: uppercase; }
+.filter-chip span { color: var(--muted-2); margin-left: 3px; }
+.filter-chip.active span { color: var(--teal); }
+.queue-button { display: block; width: 100%; }
+.queue-button #queueButtonCount { float: none; color: var(--muted); margin-left: 5px; }
+.queue-button > span:last-child { float: right; }
+.error-state { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid rgba(255, 149, 97, .35); background: rgba(255, 149, 97, .08); color: var(--orange); padding: 10px 12px; margin: -10px 0 14px; font: 10px 'DM Mono', monospace; }
+.error-state button { background: transparent; border: 1px solid currentColor; color: inherit; border-radius: 3px; padding: 5px 9px; font-size: 9px; }
+.footer-note a { color: var(--teal); text-decoration: none; }
+.footer-note a:hover { text-decoration: underline; }
+.queue-drawer { position: fixed; inset: 0; z-index: 1000; pointer-events: none; visibility: hidden; }
+.queue-drawer.open { pointer-events: auto; visibility: visible; }
+.queue-drawer .drawer-content { transform: translateX(100%); }
+.queue-drawer.open .drawer-content { transform: translateX(0); }
+.queue-content { width: min(620px, 100%); }
+.queue-drawer-body { padding: 18px 24px 28px; }
+.queue-description { color: var(--muted); font-size: 10px; line-height: 1.5; margin: 0 0 15px; }
+.queue-row { display: grid; grid-template-columns: 9px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 13px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.queue-row:hover { background: rgba(255,255,255,.03); }
+.queue-row .alert-summary { white-space: normal; line-height: 1.35; }
+.queue-empty { border: 1px solid var(--line); color: var(--muted); padding: 24px 14px; text-align: center; font: 10px 'DM Mono', monospace; }
+.reason-item::before { content: '•'; }
+body.light-theme .main-content { background: var(--bg); }
+body.light-theme .metric-card, body.light-theme .panel { box-shadow: none; background: var(--panel); }
+body.light-theme .sidebar { background: var(--bg); }
+body.light-theme .nav-item.active, body.light-theme .layer-button.active, body.light-theme .filter-chip.active { background: var(--panel-2); }

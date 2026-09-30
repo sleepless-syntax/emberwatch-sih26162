@@ -7,11 +7,13 @@ EmberWatch is a presentation-ready, explainable thermal intelligence console. It
 ## 90-second demo flow
 
 1. Open the dashboard and point out the four command metrics.
-2. Click the largest red marker on the map to open its dossier.
-3. Show the transparent risk factors: FRP, sensor confidence, asset proximity and persistence.
-4. Click **Generate evidence brief** to download a source-preserving incident report.
-5. Click **Refresh intelligence**. Without a key, the reliable demo fixtures remain; with a key, the same pipeline switches to live NASA FIRMS observations.
-6. Toggle Satellite and Industrial assets to show the visual verification workflow.
+2. Click **Judge scenario** to reset one consistent sample dataset and open the highest-priority dossier.
+3. Use **All**, **Critical**, and **High** in the decision queue; each count is derived from the same alert list.
+4. Click **Open full queue** to inspect every triage item, then select a row for its dossier.
+5. Show the transparent risk factors: FRP, sensor confidence, asset proximity and persistence.
+6. Click **Generate evidence brief** to download a source-preserving incident report.
+7. Click **Refresh intelligence**. Without a key, the reliable demo fixtures remain; with a key, the same pipeline switches to live NASA FIRMS observations.
+8. Toggle Satellite and Industrial assets to show the visual verification workflow.
 
 ## Run locally
 
@@ -49,6 +51,8 @@ The ingestion adapter requests the India bounding box from the NASA FIRMS VIIRS 
 | `GET /api/timeline` | Detection activity buckets |
 | `POST /api/refresh` | FIRMS + optional OSM refresh |
 | `GET /api/report/{hotspot_id}` | Downloadable evidence brief |
+| `GET /privacy` | Prototype privacy disclosure |
+| `GET /terms` | Prototype terms of use |
 
 ## Architecture
 
@@ -61,7 +65,7 @@ Satellite tiles ─────────────────────�
                                                             FastAPI + Leaflet console
 ```
 
-The score is intentionally interpretable for operational trust: thermal intensity (27%), FRP (27%), sensor confidence (18%), industrial proximity (18%), persistence (6%), and recency (4%). This is a strong hackathon baseline because every alert has a human-readable reason and a recommended verification step.
+The score is intentionally interpretable for operational trust: thermal intensity (27%), FRP (27%), sensor confidence (18%), industrial proximity (18%), persistence (6%), and recency (4%). The demo dataset explicitly separates suspected industrial fire signals, persistent thermal sources, industrial heat, and non-industrial observations. A thermal observation near a facility is not automatically labelled a fire. Every queue item has a human-readable reason and a recommended verification step.
 
 ## Strong pitch points
 

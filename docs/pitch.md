@@ -17,7 +17,7 @@ EmberWatch converts NASA FIRMS detections into an explainable decision queue. It
 
 ## Judge demo script
 
-> “This is EmberWatch. On the left we see the source fabric; in the middle, every thermal event is spatially anchored to an industrial asset. I click the red Jamnagar event. The system tells me why it is critical: 42.8 MW, 88% sensor confidence, and 0.7 km from the refinery complex. I can inspect each factor instead of trusting a black-box label. Finally I export the evidence brief for a response team. This turns a satellite pixel into an action.”
+> “This is EmberWatch. On the left we see the source fabric; in the middle, every thermal event is spatially anchored to an industrial asset. I click the Jamnagar event. The system marks it as a suspected industrial fire signal: 42.8 MW, 88% sensor confidence, and 1.4 km from the refinery complex. I can inspect each factor instead of trusting a black-box label. Finally I export the evidence brief for a response team. This turns a satellite pixel into a reviewable triage item.”
 
 ## Evaluation mapping
 

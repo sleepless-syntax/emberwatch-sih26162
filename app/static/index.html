@@ -4,7 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#071016" />
-    <title>EmberWatch — Thermal Intelligence</title>
+    <meta name="description" content="EmberWatch screens satellite thermal observations against industrial assets for explainable incident triage." />
+    <link rel="canonical" href="/" />
+    <meta property="og:title" content="EmberWatch Thermal Intelligence" />
+    <meta property="og:description" content="Explainable thermal event screening for industrial zones." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="apple-touch-icon" href="/static/favicon.svg" />
+    <link rel="manifest" href="/static/manifest.webmanifest" />
+    <title>EmberWatch | Thermal Intelligence</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -20,8 +29,8 @@
         </div>
         <div class="rail-label">COMMAND CENTRE</div>
         <nav class="nav-list">
-          <button class="nav-item active"><span class="nav-icon">⌁</span>Live intelligence</button>
-          <button class="nav-item" id="navAlerts"><span class="nav-icon">◉</span>Alert queue <b id="navAlertCount">—</b></button>
+          <button class="nav-item active" id="navLive"><span class="nav-icon">⌁</span>Live intelligence</button>
+          <button class="nav-item" id="navAlerts"><span class="nav-icon">◉</span>Alert queue <b id="navAlertCount">...</b></button>
           <button class="nav-item" id="navAtlas"><span class="nav-icon">◫</span>Industrial atlas</button>
           <button class="nav-item" id="navReports"><span class="nav-icon">↗</span>Evidence reports</button>
         </nav>
@@ -48,15 +57,16 @@
             <div class="mode-pill" id="modePill"><span class="status-dot"></span><span id="modeText">DEMO MODE</span></div>
             <div class="updated" id="lastUpdated">Syncing…</div>
             <button class="icon-button" id="themeToggle" title="Toggle light/dark theme">◐</button>
-            <button class="showcase-button" id="showcaseBtn"><span>✦</span> Judge demo</button><button class="refresh-button" id="refreshBtn"><span class="refresh-icon">↻</span> Refresh intelligence</button>
+            <button class="showcase-button" id="showcaseBtn"><span>DEMO</span> Judge scenario</button><button class="refresh-button" id="refreshBtn"><span class="refresh-icon">↻</span> Refresh intelligence</button>
           </div>
         </header>
+        <div class="error-state" id="errorState" role="alert" hidden><span id="errorMessage">Unable to load intelligence.</span><button id="retryBtn">Retry</button></div>
 
         <section class="metric-grid" aria-label="Overview metrics">
-          <article class="metric-card accent-red"><div class="metric-head"><span>ACTIVE ALERTS</span><span class="metric-symbol">◉</span></div><div class="metric-value" id="metricAlerts">—</div><div class="metric-foot"><span class="trend down">↑</span><span>requires triage</span></div></article>
-          <article class="metric-card accent-amber"><div class="metric-head"><span>CRITICAL ZONES</span><span class="metric-symbol">✦</span></div><div class="metric-value" id="metricCritical">—</div><div class="metric-foot"><span class="trend flat">•</span><span>industrial proximity</span></div></article>
-          <article class="metric-card accent-orange"><div class="metric-head"><span>HOTSPOTS / 24H</span><span class="metric-symbol">⌁</span></div><div class="metric-value" id="metricHotspots">—</div><div class="metric-foot"><span class="trend up">↗</span><span id="metricFireText">thermal observations</span></div></article>
-          <article class="metric-card accent-teal"><div class="metric-head"><span>MEAN CONFIDENCE</span><span class="metric-symbol">✓</span></div><div class="metric-value"><span id="metricConfidence">—</span><small>%</small></div><div class="metric-foot"><span class="trend good">●</span><span>VIIRS signal quality</span></div></article>
+          <article class="metric-card accent-red"><div class="metric-head"><span>ACTIVE ALERTS</span><span class="metric-symbol">◉</span></div><div class="metric-value" id="metricAlerts">...</div><div class="metric-foot"><span class="trend down">↑</span><span>requires triage</span></div></article>
+          <article class="metric-card accent-amber"><div class="metric-head"><span>CRITICAL ZONES</span><span class="metric-symbol">!</span></div><div class="metric-value" id="metricCritical">...</div><div class="metric-foot"><span class="trend flat">•</span><span>industrial proximity</span></div></article>
+          <article class="metric-card accent-orange"><div class="metric-head"><span>HOTSPOTS / 24H</span><span class="metric-symbol">⌁</span></div><div class="metric-value" id="metricHotspots">...</div><div class="metric-foot"><span class="trend up">↗</span><span id="metricFireText">thermal observations</span></div></article>
+          <article class="metric-card accent-teal"><div class="metric-head"><span>MEAN CONFIDENCE</span><span class="metric-symbol">QC</span></div><div class="metric-value"><span id="metricConfidence">...</span><small>%</small></div><div class="metric-foot"><span class="trend good">●</span><span>VIIRS signal quality</span></div></article>
         </section>
 
         <section class="workspace-grid">
@@ -71,23 +81,24 @@
           </div>
 
           <aside class="alerts-panel panel">
-            <div class="panel-toolbar compact"><div><div class="panel-kicker">DECISION QUEUE</div><h2>Priority alerts <span class="count-badge" id="alertBadge">—</span></h2></div><button class="more-button">•••</button></div>
-            <div class="alert-filters"><button class="filter-chip active" data-filter="all">All</button><button class="filter-chip" data-filter="CRITICAL">Critical</button><button class="filter-chip" data-filter="HIGH">High</button></div>
+            <div class="panel-toolbar compact"><div><div class="panel-kicker">DECISION QUEUE</div><h2>Priority alerts <span class="count-badge" id="alertBadge">...</span></h2></div><span class="queue-summary" id="queueSummary">Loading</span></div>
+            <div class="alert-filters"><button class="filter-chip active" data-filter="ALL">All <span id="allCount">...</span></button><button class="filter-chip" data-filter="CRITICAL">Critical <span id="criticalCount">...</span></button><button class="filter-chip" data-filter="HIGH">High <span id="highCount">...</span></button></div>
             <div class="alert-list" id="alertList"><div class="loading-state"><span class="loader"></span>Loading sensor queue…</div></div>
-            <button class="queue-button" id="showAllBtn">Open full queue <span>→</span></button>
+            <button class="queue-button" id="showAllBtn">Open full queue <span id="queueButtonCount">...</span><span>View</span></button>
           </aside>
         </section>
 
         <section class="bottom-grid">
           <article class="timeline-card panel"><div class="panel-toolbar compact"><div><div class="panel-kicker">TEMPORAL PULSE</div><h2>Detection activity</h2></div><div class="range-pill">LAST 24 HOURS <span>⌄</span></div></div><div class="timeline" id="timeline"><div class="loading-state"><span class="loader"></span>Building activity curve…</div></div><div class="timeline-axis"><span>24h ago</span><span>18h</span><span>12h</span><span>6h</span><span>Now</span></div></article>
-          <article class="insight-card panel"><div class="panel-kicker">MODEL INSIGHT</div><h2>What changed?</h2><div class="insight-main"><div class="insight-number" id="insightNumber">—</div><div><strong>high-risk events clustered</strong><span>around mapped industrial corridors</span></div></div><div class="insight-bar"><span id="insightBar"></span></div><div class="insight-footer"><span><i class="tiny-dot red"></i>industrial probability</span><span id="insightValue">—</span></div></article>
-          <article class="sources-card panel"><div class="panel-kicker">PROVENANCE</div><h2>Evidence chain</h2><div class="provenance-row"><div class="prov-icon nasa">N</div><div><strong>NASA FIRMS / VIIRS</strong><span>Fire radiative power + confidence</span></div><span class="prov-check">✓</span></div><div class="provenance-row"><div class="prov-icon osm">⌘</div><div><strong>OpenStreetMap</strong><span>Industrial assets + context</span></div><span class="prov-check">✓</span></div><div class="provenance-row"><div class="prov-icon sat">✦</div><div><strong>Satellite context</strong><span>Visual verification layer</span></div><span class="prov-check">✓</span></div></article>
+           <article class="insight-card panel"><div class="panel-kicker">OBSERVATION MIX</div><h2>What is recurring?</h2><div class="insight-main"><div class="insight-number" id="insightNumber">...</div><div><strong>persistent thermal sources</strong><span>separated from suspected fire signals</span></div></div><div class="insight-bar"><span id="insightBar"></span></div><div class="insight-footer"><span><i class="tiny-dot red"></i>share of observations</span><span id="insightValue">...</span></div></article>
+           <article class="sources-card panel"><div class="panel-kicker">PROVENANCE</div><h2>Evidence chain</h2><div class="provenance-row"><div class="prov-icon nasa">N</div><div><strong>NASA FIRMS / VIIRS</strong><span>Fire radiative power + confidence</span></div><span class="prov-check">source</span></div><div class="provenance-row"><div class="prov-icon osm">O</div><div><strong>OpenStreetMap</strong><span>Industrial assets + context</span></div><span class="prov-check">source</span></div><div class="provenance-row"><div class="prov-icon sat">S</div><div><strong>Satellite context</strong><span>Visual verification layer</span></div><span class="prov-check">source</span></div></article>
         </section>
-        <footer class="footer-note"><span>EMBERWATCH / SIH26162 PROTOTYPE</span><span>Explainable intelligence · Human-in-the-loop verification · Source links preserved</span></footer>
+        <footer class="footer-note"><span>EMBERWATCH / SIH26162 PROTOTYPE</span><span>Sample observations are labelled · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></span></footer>
       </main>
     </div>
 
     <div class="detail-drawer" id="detailDrawer" aria-hidden="true"><div class="drawer-backdrop" id="drawerBackdrop"></div><div class="drawer-content"><div class="drawer-header"><div><div class="panel-kicker">EVENT DOSSIER</div><h2 id="drawerTitle">Alert details</h2></div><button class="drawer-close" id="drawerClose">×</button></div><div id="drawerBody"></div></div></div>
+    <div class="queue-drawer" id="queueDrawer" aria-hidden="true"><div class="drawer-backdrop" id="queueBackdrop"></div><div class="drawer-content queue-content"><div class="drawer-header"><div><div class="panel-kicker">DECISION QUEUE</div><h2>All priority alerts <span class="count-badge" id="fullQueueCount">...</span></h2></div><button class="drawer-close" id="queueClose">×</button></div><div class="queue-drawer-body"><p class="queue-description">Every item above the triage threshold, ordered by risk score. Select an item to inspect the evidence chain.</p><div id="fullQueueList"></div></div></div></div>
     <div class="toast" id="toast"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="/static/app.js"></script>

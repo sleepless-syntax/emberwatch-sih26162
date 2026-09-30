@@ -1,4 +1,4 @@
-const state = { hotspots: [], alerts: [], sites: [], markerLayer: null, siteLayer: null, satellite: null, map: null, alertFilter: 'all' };
+const state = { hotspots: [], alerts: [], sites: [], markerLayer: null, siteLayer: null, satellite: null, map: null, alertFilter: 'ALL' };
 
 const $ = (id) => document.getElementById(id);
 const api = async (path, options = {}) => {
@@ -8,6 +8,7 @@ const api = async (path, options = {}) => {
 };
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const relativeTime = (stamp) => {
+  if (!stamp) return 'time unavailable';
   const hours = Math.max(0, Math.round((Date.now() - new Date(stamp).getTime()) / 3600000));
   return hours < 1 ? 'just now' : `${hours}h ago`;
 };
@@ -57,24 +58,53 @@ function renderMetrics(overview) {
   $('metricCritical').textContent = metrics.critical_zones;
   $('metricHotspots').textContent = metrics.hotspots_24h;
   $('metricConfidence').textContent = metrics.mean_confidence;
-  $('metricFireText').textContent = `${metrics.industrial_fires} industrial fire${metrics.industrial_fires === 1 ? '' : 's'} detected`;
+  $('metricFireText').textContent = `${metrics.industrial_fires} suspected fire signal${metrics.industrial_fires === 1 ? '' : 's'} · verify`;
   $('navAlertCount').textContent = metrics.active_alerts;
   $('alertBadge').textContent = metrics.active_alerts;
   $('modeText').textContent = `${overview.mode} MODE`;
   $('lastUpdated').textContent = `LAST SYNC ${relativeTime(overview.last_updated).toUpperCase()}`;
   $('firmsSource').textContent = overview.source_status.firms;
   $('osmSource').textContent = overview.source_status.osm;
-  $('insightNumber').textContent = metrics.industrial_fires + metrics.persistent_sources;
-  const probability = Math.min(99, Math.round((metrics.industrial_fires / Math.max(1, metrics.hotspots_24h)) * 100));
-  $('insightValue').textContent = `${probability}% likelihood`;
+  $('insightNumber').textContent = metrics.persistent_sources;
+  const probability = Math.min(99, Math.round((metrics.persistent_sources / Math.max(1, metrics.hotspots_24h)) * 100));
+  $('insightValue').textContent = `${probability}% of observations`;
   $('insightBar').style.width = `${Math.max(8, probability)}%`;
-  $('mapStatus').textContent = overview.mode === 'LIVE' ? 'LIVE FIRMS WINDOW · LAST 48 HOURS' : 'DEMO SENSOR WINDOW · LAST 24 HOURS';
+  $('mapStatus').textContent = overview.mode === 'LIVE' ? 'LIVE FIRMS WINDOW · SCREENING RESULTS' : 'CURATED JUDGE SCENARIO · SAMPLE DATA';
+  $('allCount').textContent = state.alerts.length;
+  $('criticalCount').textContent = state.alerts.filter((item) => item.severity === 'CRITICAL').length;
+  $('highCount').textContent = state.alerts.filter((item) => item.severity === 'HIGH').length;
 }
 
 function renderAlerts() {
-  const filtered = state.alertFilter === 'all' ? state.alerts : state.alerts.filter((x) => x.severity === state.alertFilter);
-  $('alertList').innerHTML = filtered.length ? filtered.slice(0, 8).map((item) => `<div class="alert-item" data-id="${escapeHtml(item.hotspot_id)}"><span class="alert-severity ${item.severity}"></span><div><div class="alert-title">${escapeHtml(item.title)}</div><span class="alert-location">${escapeHtml(item.location)}</span><span class="alert-summary">${escapeHtml(item.summary)}</span></div><div><div class="alert-time">${relativeTime(item.timestamp)}</div><div class="alert-score">${item.risk_score}</div></div></div>`).join('') : '<div class="loading-state">No events match this filter.</div>';
+  const filtered = state.alertFilter === 'ALL' ? state.alerts : state.alerts.filter((x) => x.severity === state.alertFilter);
+  $('alertBadge').textContent = filtered.length;
+  $('queueSummary').textContent = `${filtered.length} shown · ${state.alerts.length} total`;
+  $('queueButtonCount').textContent = `${state.alerts.length} alerts`;
+  $('alertList').innerHTML = filtered.length ? filtered.slice(0, 8).map(alertRow).join('') : '<div class="loading-state">No alerts match this priority.</div>';
   document.querySelectorAll('.alert-item').forEach((el) => el.addEventListener('click', () => openDetail(el.dataset.id)));
+  if ($('queueDrawer').classList.contains('open')) renderFullQueue();
+}
+
+function alertRow(item, className = 'alert-item') {
+  return `<div class="${className}" data-id="${escapeHtml(item.hotspot_id)}"><span class="alert-severity ${escapeHtml(item.severity)}"></span><div><div class="alert-title">${escapeHtml(item.title)}</div><span class="alert-location">${escapeHtml(item.location)}</span><span class="alert-summary">${escapeHtml(item.summary)}</span></div><div><div class="alert-time">${relativeTime(item.timestamp)}</div><div class="alert-score">${item.risk_score}</div></div></div>`;
+}
+
+function renderFullQueue() {
+  const filtered = state.alertFilter === 'ALL' ? state.alerts : state.alerts.filter((x) => x.severity === state.alertFilter);
+  $('fullQueueCount').textContent = filtered.length;
+  $('fullQueueList').innerHTML = filtered.length ? filtered.map((item) => alertRow(item, 'queue-row')).join('') : '<div class="queue-empty">No alerts match this priority.</div>';
+  document.querySelectorAll('.queue-row').forEach((row) => row.addEventListener('click', () => { closeQueue(); openDetail(row.dataset.id); }));
+}
+
+function openQueue() {
+  renderFullQueue();
+  $('queueDrawer').classList.add('open');
+  $('queueDrawer').setAttribute('aria-hidden', 'false');
+}
+
+function closeQueue() {
+  $('queueDrawer').classList.remove('open');
+  $('queueDrawer').setAttribute('aria-hidden', 'true');
 }
 
 function renderTimeline(timeline) {
@@ -108,11 +138,12 @@ function scrollToPanel(selector, navId) {
 }
 
 async function loadData() {
+  $('errorState').hidden = true;
   try {
     const [overview, hotspots, alerts, sites, timeline] = await Promise.all([api('/api/overview'), api('/api/hotspots'), api('/api/alerts'), api('/api/industrial-sites'), api('/api/timeline')]);
     state.hotspots = hotspots; state.alerts = alerts; state.sites = sites;
     renderMetrics(overview); renderAlerts(); renderTimeline(timeline); drawMap();
-  } catch (error) { showToast('API unavailable — start the FastAPI server'); console.error(error); }
+  } catch { $('errorMessage').textContent = 'Intelligence data could not be loaded. The service may be waking up.'; $('errorState').hidden = false; showToast('Data unavailable; retry when the service is ready'); }
 }
 
 async function refreshData() {
@@ -120,19 +151,20 @@ async function refreshData() {
   try { const result = await api('/api/refresh', { method: 'POST' }); showToast(result.message); await loadData(); } catch (error) { showToast('Refresh failed; demo data is still available'); } finally { button.disabled = false; button.innerHTML = '<span class="refresh-icon">↻</span> Refresh intelligence'; }
 }
 async function runShowcase() {
-  const button = $('showcaseBtn'); button.disabled = true; button.innerHTML = '<span>✦</span> Loading scenario…';
-  try { await api('/api/demo/reset', { method: 'POST' }); await loadData(); const sites = document.querySelector('[data-layer="sites"]'); if (!sites.classList.contains('active')) sites.click(); setActiveNav('navAlerts'); document.querySelector('.workspace-grid').scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => { if (state.alerts[0]) openDetail(state.alerts[0].hotspot_id); showToast('Judge demo loaded — explore the dossier, filters, layers and evidence brief'); }, 700); } catch { showToast('Could not load the showcase scenario'); } finally { button.disabled = false; button.innerHTML = '<span>✦</span> Judge demo'; }
+  const button = $('showcaseBtn'); button.disabled = true; button.innerHTML = '<span>DEMO</span> Loading scenario…';
+  try { await api('/api/demo/reset', { method: 'POST' }); await loadData(); const sites = document.querySelector('[data-layer="sites"]'); if (!sites.classList.contains('active')) sites.click(); setActiveNav('navAlerts'); document.querySelector('.workspace-grid').scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => { if (state.alerts[0]) openDetail(state.alerts[0].hotspot_id); showToast('Judge scenario loaded; inspect filters, layers and evidence'); }, 700); } catch { showToast('Could not load the showcase scenario'); } finally { button.disabled = false; button.innerHTML = '<span>DEMO</span> Judge scenario'; }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   initMap(); loadData();
-  $('refreshBtn').addEventListener('click', refreshData); $('drawerClose').addEventListener('click', closeDetail); $('drawerBackdrop').addEventListener('click', closeDetail);
+  $('refreshBtn').addEventListener('click', refreshData); $('drawerClose').addEventListener('click', closeDetail); $('drawerBackdrop').addEventListener('click', closeDetail); $('queueClose').addEventListener('click', closeQueue); $('queueBackdrop').addEventListener('click', closeQueue); $('retryBtn').addEventListener('click', loadData);
   $('showcaseBtn').addEventListener('click', runShowcase);
+  $('navLive').addEventListener('click', () => { setActiveNav('navLive'); window.scrollTo({ top: 0, behavior: 'smooth' }); });
   $('navAlerts').addEventListener('click', () => scrollToPanel('.alerts-panel', 'navAlerts'));
   $('navAtlas').addEventListener('click', () => { scrollToPanel('.map-card', 'navAtlas'); const sites = document.querySelector('[data-layer="sites"]'); if (!sites.classList.contains('active')) sites.click(); });
   $('navReports').addEventListener('click', () => { setActiveNav('navReports'); const first = state.alerts[0]; if (first) openDetail(first.hotspot_id); else showToast('No incident reports available'); });
   $('themeToggle').addEventListener('click', () => { document.body.classList.toggle('light-theme'); localStorage.setItem('emberwatch-theme', document.body.classList.contains('light-theme') ? 'light' : 'dark'); });
   if (localStorage.getItem('emberwatch-theme') === 'light') document.body.classList.add('light-theme');
-  document.querySelectorAll('.filter-chip').forEach((button) => button.addEventListener('click', () => { document.querySelectorAll('.filter-chip').forEach((x) => x.classList.remove('active')); button.classList.add('active'); state.alertFilter = button.dataset.filter.toLowerCase(); renderAlerts(); }));
-  $('showAllBtn').addEventListener('click', () => { document.querySelector('[data-filter="all"]').click(); document.querySelector('.alerts-panel').scrollIntoView({ behavior: 'smooth' }); });
+  document.querySelectorAll('.filter-chip').forEach((button) => button.addEventListener('click', () => { document.querySelectorAll('.filter-chip').forEach((x) => x.classList.remove('active')); button.classList.add('active'); state.alertFilter = button.dataset.filter.toUpperCase(); renderAlerts(); }));
+  $('showAllBtn').addEventListener('click', () => { state.alertFilter = 'ALL'; document.querySelectorAll('.filter-chip').forEach((x) => x.classList.toggle('active', x.dataset.filter === 'ALL')); renderAlerts(); openQueue(); });
 });

@@ -1,0 +1,9 @@
+{
+  "name": "EmberWatch Thermal Intelligence",
+  "short_name": "EmberWatch",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#071016",
+  "theme_color": "#071016",
+  "icons": [{"src": "/static/favicon.svg", "sizes": "any", "type": "image/svg+xml"}]
+}
